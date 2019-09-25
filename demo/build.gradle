@@ -26,6 +26,7 @@ sonarqube{
 		property "sonar.projectName", "prueba-sha"
         	property "sonar.projectKey", "prueba-sha"
 		property "sonar.buildbreaker.skip" , "false"
+		property "sonar.sources", "src"
 		//property "sonar.host.url","http://10.197.248.245:9000"
     }
 }
