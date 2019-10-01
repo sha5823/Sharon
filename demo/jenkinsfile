@@ -9,7 +9,7 @@ pipeline{
 
         stage('AnalysisSonarQube'){
             steps{
-                withSonarQubeEnv(){
+                withSonarQubeEnv('SonarQubeLocal'){
                     bat './gradew sonarqube'
                 }
             }
