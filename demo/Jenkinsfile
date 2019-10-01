@@ -10,7 +10,9 @@ pipeline{
         stage('AnalysisSonarQube'){
             steps{
                 withSonarQubeEnv('SonarQubeLocal'){
-                    bat './gradew sonarqube'
+                    dir('demo'){
+                        bat 'gradle sonarqube'
+                    }
                 }
             }
         }
