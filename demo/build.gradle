@@ -1,5 +1,12 @@
+buildscript {
+    repositories { maven { url "https://plugins.gradle.org/m2/" } }
+  dependencies { classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.7.1" }
+}
+
+apply plugin: "org.sonarqube"
+
 plugins {
-	id "org.sonarqube" version "2.7.1"
+	// id "org.sonarqube" version "2.7.1"
 	id 'org.springframework.boot' version '2.1.8.RELEASE'
 	id 'io.spring.dependency-management' version '1.0.8.RELEASE'
 	id 'java'
@@ -31,6 +38,112 @@ sonarqube{
 		property "sonar.scm.disabled","true"
 		property "sonar.exclusions", "**/test/**/*.java, **/test/**/*.xml, **/test/**/*.txt"
     }
+}
+
+
+task scannerAll(){
+	dependsOn ":checkSonarQube"
+}
+
+task checkSonarQube {
+	dependsOn("sonarqube")
+	doFirst{
+		def ceTaskId = getCeTaskId("${workspace}")
+		if(ceTaskId.isEmpty()){
+			ant.fail ("Project ${name} -> No report file found... Cannot proceed.")
+		}
+		else{
+			println("ceTaskId -> ${ceTaskId}")
+
+			def analysisComplete = false
+			def json
+			def request
+			def taskStatusURL = "http://localhost:9000/api/ce/task?id=${ceTaskId}"
+			def tokenAuth = "4649264ddb620119a70a6975a7987f2e4eb5a6dd"
+			//def usuario = "admin"
+			//def password = "admin"
+
+			println (taskStatusURL)
+			while(!analysisComplete){
+				request = ['curl', '-u', "${tokenAuth}:", taskStatusURL ].execute()
+				json = new groovy.json.JsonSlurper().parseText(request.text)
+				if(json.errors != null){
+					ant.fail ("Project ${name} -> ${ceTaskId} doesn't exist on the server")
+					//Abort
+				}else{
+					def taskStatus = json.task.status
+					switch(taskStatus) {
+						case "PENDING":
+							//Waiting
+							// println ("Still Pending")
+							break
+						case "IN_PROGRESS":
+							//Waiting
+							// println ("Still In Progress")
+							break
+						case "FAILED":
+							//Abort
+							ant.fail ("Project ${name} -> Just Failed")
+							break
+						case "CANCELLED":
+							//Abort
+							ant.fail ("Project ${name} -> Cancelled")
+							break
+						case "SUCCESS":
+							println ("Successful project uploaded to the server")
+							analysisComplete = true 
+							break
+						case "*":
+							//Abort
+							ant.fail ("Project ${name} -> UNKNOWN STATUS")
+							break
+						default:
+							break
+					}
+				}
+			}
+			def analysisId = json.task.analysisId
+			println ("Get analysisId -> ${analysisId}")
+
+			println ("Obtaining project status according to Server Quality Qates...")
+			def projectStatusURL = "http://localhost:9000/api/qualitygates/project_status?analysisId=${analysisId}"
+			println ("Observe the status of the project on ${projectStatusURL}")
+			request = ['curl', '-u', "${tokenAuth}:", projectStatusURL ].execute()
+			json = new groovy.json.JsonSlurper().parseText(request.text)
+			def projectStatus = json.projectStatus.status
+
+			if ( projectStatus.equals("OK"))
+			{
+				println ("Project ${name} -> Status is ${projectStatus}")
+			}
+			else if( projectStatus.equals("ERROR"))
+			{
+				ant.fail ("Project ${name} -> Status is ERROR: ${projectStatus}")
+				//Abort
+			}else{
+				ant.fail ("Project ${name} -> Status is UNKNOWN: ${projectStatus}")
+				//Abort
+			}
+		}
+		
+	}
+}
+
+String getCeTaskId(directory){
+    println (directory)//get where i am
+    def directorio = fileTree(dir: directory, includes: ['**/report-task.txt'])
+    def file = file(directorio[0].toString())
+    def ceTaskId=""
+    if(file.toString().contains("report-task.txt"))
+    {
+        def lines = file.readLines()
+        lines.each{
+            if( it.matches("ceTaskId(.*)")){
+                ceTaskId = it.split('=')[1]
+            }
+        }
+    }
+    return ceTaskId
 }
 
 task tare1{
