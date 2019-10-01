@@ -39,7 +39,7 @@ task scannerAll(){
 }
 
 task checkSonarQube {
-	dependsOn("sonarqube")
+	//dependsOn("sonarqube")
 	doFirst{
 		def ceTaskId = getCeTaskId("${projectDir}")
 		if(ceTaskId.isEmpty()){

@@ -1,7 +1,7 @@
 pipeline{
     agent any
     stages {
-        stage('Checkout-git'){
+        stage('Checkout git'){
             steps{
                 git poll: true, url: 'https://github.com/sha5823/Sharon.git'
             }
@@ -11,19 +11,26 @@ pipeline{
             steps{
                 withSonarQubeEnv('SonarQubeLocal'){
                     dir('demo'){
-                        bat 'gradle sonarqube'
+                        bat 'gradlew.bat sonarqube'
                     }
                 }
             }
         }
+        stage('Checking project status'){
+            steps{
+                dir('demo'){
+                    bat 'gradlew.bat checkSonarQube'
+                }
+            }
+        }
 
-        stage('Project-Clean'){
+        stage('Project Clean'){
             steps{
                 dir('demo') { bat 'gradlew.bat clean' }
             }
         }
 
-        stage('Project-Build'){
+        stage('Project Build'){
             steps{
                 dir('demo') { bat 'gradlew.bat build' }
             }
